@@ -14,6 +14,8 @@ npm create vite@latest
 
 ## 二、ESLint+Prettier 配置（实现代码规范化）
 
+> https://juejin.cn/post/7402696141495779363**（参考网址）**
+
 1. 安装`ESlint`到开发依赖中
 
 ```shell
@@ -36,9 +38,231 @@ pnpm add eslint@latest -D
 ```json
 // 在package.json中配置如下命令
 "scripts": {
-    "lint": "eslint",
-    "lint:fix": "eslint --fix",
+    "lint": "eslint . --ext .js,.ts,.tsx,.vue",
+    "lint:fix": "eslint . --ext .js,.ts,.tsx,.vue --fix"
     ...
   },
+```
+
+3. 创建`Eslint`配置文件
+
+> 从`ESlint9.x`开始，建议直接用`eslint.config.js`（`ESNext`）或者`eslint.config.mjs`（`CommonJS`）命名的配置文件。
+
+```js
+// 因为我们的lint命令是没有指定目录或者指定文件类型的，默认eslit会去读取项目所有文件进行校验，所以我们需要在配置文件中使用
+// ignores字段来告诉eslint排除哪些文件，这里也建议写在配置文件里面（更灵活），而不是写在命令那里（比较乱）。
+export default [
+    {
+        ignores: [
+            'node_modules',
+            'dist',
+            'public',
+        ],
+    },
+]
+```
+
+4. 规则制定
+
+> 到这里，规则那么多，我要一条一条全部写出来吗？我们可以用ESlint提供的现成的规则集。
+
+```shell
+pnpm add -D @eslint/js typescript typescript-eslint eslint-plugin-vue vue-eslint-parser eslint-config-prettier globals
+```
+
+> **@eslint/js：**ESLint 官方内置规则集的模块化版本（Flat Config 用的）。 提供 `js.configs.recommended` 等。ESLint v9 起官方推荐的入口。
+>
+> **typescript：**ESLint 的 TS 规则、类型检查都依赖它。
+>
+> **typescript-eslint：**让 ESLint 能“读懂” `.ts` / `.vue` 中的 TypeScript。
+>
+>  **eslint-plugin-vue：**Vue 官方维护的 ESLint 插件。提供大量 Vue 特有的规则
+>
+> **vue-eslint-parser：**负责“读懂” `.vue` 文件结构。
+>
+> **eslint-config-prettier ：**如果你用 Prettier 格式化代码，必须装它来避免冲突。
+>
+> **globals：**提供浏览器、Node.js、ES2023 等常见全局变量的集合。让 ESLint 知道哪些全局是合法的
+
+```js
+// eslint.config.js
+import js from "@eslint/js";
+import globals from "globals";
+import tseslint from "typescript-eslint";
+import vue from "eslint-plugin-vue";
+import vueParser from "vue-eslint-parser";
+import prettier from "eslint-config-prettier";
+
+export default [
+    // 忽略
+    { ignores: ["dist", "node_modules", "coverage"] },
+
+    // 官方 JS 推荐（对象 ✅）
+    js.configs.recommended,
+
+    // TypeScript 推荐（数组 -> 展开 ✅）
+    ...tseslint.configs.recommended,
+
+    // Vue Flat 推荐（数组 -> 展开 ✅）
+    ...vue.configs["flat/recommended"],
+
+    // .vue：外层用 vue-parser，script 内再交给 TS parser
+    {
+        files: ["**/*.vue"],
+        languageOptions: {
+            parser: vueParser,
+            parserOptions: {
+                parser: tseslint.parser,
+                ecmaVersion: "latest",
+                sourceType: "module",
+                extraFileExtensions: [".vue"],
+            },
+            globals: { ...globals.browser, ...globals.node },
+        },
+    },
+
+    // .ts / .tsx
+    {
+        files: ["**/*.{ts,tsx}"],
+        languageOptions: {
+            parser: tseslint.parser,
+            ecmaVersion: "latest",
+            sourceType: "module",
+            globals: { ...globals.browser, ...globals.node },
+        },
+    },
+
+    // 关掉和 Prettier 冲突的格式规则（对象 ✅）
+    prettier,
+
+    // 你的个性化规则
+    {
+        files: ["**/*.{ts,tsx,vue,js,jsx}"],
+        rules: {
+            "no-console": "off",
+            "no-unused-vars": "off",
+            "@typescript-eslint/no-unused-vars": [
+                "warn",
+                { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+            ],
+            "vue/multi-word-component-names": "off",
+        },
+    },
+];
+
+```
+
+5. 安装`Prettier`
+
+```shell
+pnpm add -D prettier eslint-config-prettier
+```
+
+6. 创建`Prettier`规则
+
+> 创建`prettierrc.json`文件，输入以下规则参考自`art-design-pro`。
+
+```js
+{
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": false,
+  "vueIndentScriptAndStyle": true,
+  "singleQuote": true,
+  "quoteProps": "as-needed",
+  "bracketSpacing": true,
+  "trailingComma": "none",
+  "bracketSameLine": false,
+  "jsxSingleQuote": false,
+  "arrowParens": "always",
+  "insertPragma": false,
+  "requirePragma": false,
+  "proseWrap": "never",
+  "htmlWhitespaceSensitivity": "strict",
+  "endOfLine": "auto",
+  "rangeStart": 0
+}
+```
+
+7. 确保`Eslink`引入`Prettier`
+
+> eslink.config.js中存在以下配置
+
+```js
+import prettier from "eslint-config-prettier";
+
+export default [
+  // ...其他配置
+  prettier, // 放在最后：关闭 ESLint 的格式化规则
+];
+```
+
+8. 在`IDE`中启动`Prettier`格式化
+
+<img src="images/image-20251030001748325.png" alt="image-20251030001748325" style="zoom:25%;" />
+
+## 三、路径别名 配置
+
+| 阶段                        | 谁在起作用                                   | 文件             | 作用                                                         |
+| --------------------------- | -------------------------------------------- | ---------------- | ------------------------------------------------------------ |
+| 👨‍💻 **开发/运行时**          | **Vite**                                     | `vite.config.ts` | 当你写 `import xx from "@/api/user"` 时，Vite 知道 `@` 对应哪个物理目录（在开发服务器上解析） |
+| 🧠 **类型检查 / 自动补全**   | **TypeScript + 编辑器（VSCode / WebStorm）** | `tsconfig.json`  | 让 TypeScript 和编辑器在静态分析时知道 `@` 是 `src/`，不然它会报找不到模块 |
+| 📦 **构建时（Rollup 打包）** | **Vite + Rollup**                            | `vite.config.ts` | 打包时替换别名路径，确保输出文件路径正确                     |
+
+1. 打开 `vite.config.ts`，加入以下内容：
+
+```ts
+...
+import path from "node:path";
+
+export default defineConfig({
+  ...
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "src"), // @ 指向 src 目录
+    },
+  },
+})
+```
+
+2. 配置`tsconfig.json`
+
+> 为了让编辑器（和编译器）也识别别名，你还需要在 tsconfig.json 里同步配置：
+
+```json
+{
+  ...
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    }
+  }
+}	
+```
+
+## 四、环境变量 配置
+
+1. 创建环境变量文件
+
+| 文件名             | 适用环境 | 加载条件           |
+| ------------------ | -------- | ------------------ |
+| `.env`             | 所有环境 | 总是会加载         |
+| `.env.development` | 开发环境 | `vite dev`         |
+| `.env.production`  | 生产环境 | `vite build`       |
+| `.env.test`        | 测试环境 | `vite --mode test` |
+
+2. 注意事项
+
+> ⚠️ 所有自定义环境变量**必须以 `VITE_` 开头**！ 否则不会被注入到你的应用中。
+
+3. 使用方式`import.meta.env.xxx`
+
+```ts
+// 举例
+const baseURL = import.meta.env.VITE_API_BASE_URL;
 ```
 
