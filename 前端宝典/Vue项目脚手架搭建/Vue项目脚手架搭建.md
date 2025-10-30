@@ -266,3 +266,131 @@ export default defineConfig({
 const baseURL = import.meta.env.VITE_API_BASE_URL;
 ```
 
+## 五、Vue-Bits 动画库使用指南（可选）
+
+> https://juejin.cn/post/7534969549495599146**（参考网址）**
+>
+> https://blog.csdn.net/qq_36034945/article/details/149838374**（参考网址）**
+
+...
+
+## 六、集成 Unocss (可选)
+
+> **官网：**https://unocss.dev/integrations/vite
+
+1. 安装依赖
+
+```shell
+pnpm add -D unocss
+```
+
+2. 安装插件
+
+```ts
+import UnoCSS from 'unocss/vite'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [
+    UnoCSS(),
+  ],
+})
+```
+
+3. 创建`uno.config.ts`文件
+
+```ts
+import { defineConfig } from 'unocss'
+
+export default defineConfig({
+  // ...UnoCSS options
+})
+```
+
+4. 添加`virtual:uno.css`到您的主条目
+
+```ts
+// main.ts 文件中添加
+import 'virtual:uno.css'
+```
+
+## 七、集成Element Plus
+
+> **官网：**https://element-plus.org/zh-CN
+
+1. ​		安装依赖
+
+```shell
+pnpm install element-plus
+```
+
+2. 安装按需导入依赖
+
+```shell
+pnpm install -D unplugin-vue-components unplugin-auto-import
+```
+
+3. 配置按需导入插件
+
+```ts
+import { defineConfig } from 'vite'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+
+export default defineConfig({
+  // ...
+  plugins: [
+    // ...
+    AutoImport({
+      resolvers: [ElementPlusResolver()],
+    }),
+    Components({
+      resolvers: [ElementPlusResolver()],
+    }),
+  ],
+})
+```
+
+## 八、集成 Router 路由
+
+1. 安装依赖
+
+```shell
+pnpm add vue-router@4
+```
+
+2. 创建路由`router/index.ts`
+
+```ts
+import { createRouter, createWebHistory } from 'vue-router';
+import Home from '@/views/home/Home.vue'
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: Home
+    }
+  ]
+});
+
+export default router;
+```
+
+3. 在`main.ts`中配置路由
+
+```ts
+import { createApp } from 'vue'
+import App from './App.vue'
+//...
+// 导入路由
+import router from './router';
+
+const app = createApp(App)
+app.use(router)
+ap	p.mount('#app')
+```
+
